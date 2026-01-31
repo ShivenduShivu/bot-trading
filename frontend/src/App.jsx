@@ -1,58 +1,64 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import Login from './components/Login'
+import Register from './components/Register'
+import Dashboard from './components/Dashboard'
+import { isAuthenticated } from './utils/api'
 import './App.css'
 
 function App() {
-  // State to store message from backend
-  const [message, setMessage] = useState('Click button to test backend connection')
-  const [loading, setLoading] = useState(false)
+  // State to track which page to show
+  const [currentView, setCurrentView] = useState('login') // 'login', 'register', or 'dashboard'
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
 
-  // Function to call backend API
-  const testBackendConnection = async () => {
-    setLoading(true)
-    try {
-      // Call the backend API
-      const response = await fetch('http://localhost:8000/api/hello')
-      const data = await response.json()
-      
-      // Update state with backend message
-      setMessage(data.message)
-    } catch (error) {
-      setMessage('❌ Error: Could not connect to backend. Is it running?')
-      console.error('Error:', error)
-    } finally {
-      setLoading(false)
+  // Check if user is already logged in on component mount
+  useEffect(() => {
+    if (isAuthenticated()) {
+      setIsLoggedIn(true)
+      setCurrentView('dashboard')
     }
+  }, [])
+
+  // Handle successful login
+  const handleLoginSuccess = () => {
+    setIsLoggedIn(true)
+    setCurrentView('dashboard')
   }
 
-  return (
-    <div className="App">
-      <div className="container">
-        <h1>📈 Paper Trading Platform</h1>
-        <p className="subtitle">Checkpoint 0: Hello World</p>
-        
-        <div className="card">
-          <h2>Backend Connection Test</h2>
-          <p className="message">{message}</p>
-          
-          <button 
-            onClick={testBackendConnection}
-            disabled={loading}
-            className="test-button"
-          >
-            {loading ? '⏳ Testing...' : '🔄 Test Backend Connection'}
-          </button>
-        </div>
+  // Handle successful registration
+  const handleRegisterSuccess = () => {
+    setCurrentView('login')
+  }
 
-        <div className="info">
-          <h3>✅ What's Working:</h3>
-          <ul>
-            <li>React frontend running on port 5173</li>
-            <li>Ready to connect to FastAPI backend</li>
-            <li>Modern development setup with Vite</li>
-          </ul>
-        </div>
-      </div>
-    </div>
+  // Handle logout
+  const handleLogout = () => {
+    setIsLoggedIn(false)
+    setCurrentView('login')
+  }
+
+  // Switch between login and register
+  const switchToLogin = () => setCurrentView('login')
+  const switchToRegister = () => setCurrentView('register')
+
+  // Render the appropriate view
+  if (isLoggedIn && currentView === 'dashboard') {
+    return <Dashboard onLogout={handleLogout} />
+  }
+
+  if (currentView === 'register') {
+    return (
+      <Register 
+        onSwitchToLogin={switchToLogin}
+        onRegisterSuccess={handleRegisterSuccess}
+      />
+    )
+  }
+
+  // Default to login
+  return (
+    <Login 
+      onSwitchToRegister={switchToRegister}
+      onLoginSuccess={handleLoginSuccess}
+    />
   )
 }
 

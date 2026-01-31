@@ -1,0 +1,11 @@
+# FastAPI - Modern web framework
+fastapi==0.109.0
+
+# Uvicorn - ASGI server to run FastAPI
+uvicorn[standard]==0.27.0
+
+# Pydantic - Data validation (comes with FastAPI but explicit is good)
+pydantic==2.5.3
+
+# Python-dotenv - Load environment variables from .env file
+python-dotenv==1.0.0

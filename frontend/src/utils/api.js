@@ -5,9 +5,8 @@
 
 const API_BASE_URL = 'http://localhost:8000';
 
-/**
- * Register a new user
- */
+// ===== Authentication =====
+
 export const registerUser = async (userData) => {
   const response = await fetch(`${API_BASE_URL}/auth/register`, {
     method: 'POST',
@@ -25,11 +24,7 @@ export const registerUser = async (userData) => {
   return await response.json();
 };
 
-/**
- * Login user and get JWT token
- */
 export const loginUser = async (username, password) => {
-  // OAuth2 expects form data, not JSON
   const formData = new URLSearchParams();
   formData.append('username', username);
   formData.append('password', password);
@@ -50,9 +45,6 @@ export const loginUser = async (username, password) => {
   return await response.json();
 };
 
-/**
- * Get current user profile (requires auth token)
- */
 export const getUserProfile = async (token) => {
   const response = await fetch(`${API_BASE_URL}/api/profile`, {
     method: 'GET',
@@ -69,9 +61,8 @@ export const getUserProfile = async (token) => {
   return await response.json();
 };
 
-/**
- * Token management
- */
+// ===== Token Management =====
+
 export const saveToken = (token) => {
   localStorage.setItem('access_token', token);
 };
@@ -86,4 +77,92 @@ export const removeToken = () => {
 
 export const isAuthenticated = () => {
   return !!getToken();
+};
+
+// ===== Trading API =====
+
+/**
+ * Create a new order (BUY or SELL)
+ */
+export const createOrder = async (orderData) => {
+  const token = getToken();
+  
+  const response = await fetch(`${API_BASE_URL}/api/orders/create`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(orderData),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to create order');
+  }
+
+  return await response.json();
+};
+
+/**
+ * Get user's portfolio
+ */
+export const getPortfolio = async () => {
+  const token = getToken();
+  
+  const response = await fetch(`${API_BASE_URL}/api/portfolio`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch portfolio');
+  }
+
+  return await response.json();
+};
+
+/**
+ * Get user's order history
+ */
+export const getOrders = async (limit = 50) => {
+  const token = getToken();
+  
+  const response = await fetch(`${API_BASE_URL}/api/orders?limit=${limit}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch orders');
+  }
+
+  return await response.json();
+};
+
+/**
+ * Get user's transaction history
+ */
+export const getTransactions = async (limit = 50) => {
+  const token = getToken();
+  
+  const response = await fetch(`${API_BASE_URL}/api/transactions?limit=${limit}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch transactions');
+  }
+
+  return await response.json();
 };

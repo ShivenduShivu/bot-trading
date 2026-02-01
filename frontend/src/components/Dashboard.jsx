@@ -1,11 +1,15 @@
 import { useState, useEffect } from 'react';
-import { getUserProfile, removeToken } from '../utils/api';
+import { getUserProfile, removeToken, getOrders, getTransactions } from '../utils/api';
+import Trading from './Trading';
 import './Dashboard.css';
 
 function Dashboard({ onLogout }) {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [currentView, setCurrentView] = useState('overview'); // 'overview', 'trading', 'history'
+  const [orders, setOrders] = useState([]);
+  const [transactions, setTransactions] = useState([]);
 
   useEffect(() => {
     loadUserProfile();
@@ -18,16 +22,39 @@ function Dashboard({ onLogout }) {
       setUser(userData);
     } catch (err) {
       setError('Failed to load profile');
-      // If token is invalid, logout
       handleLogout();
     } finally {
       setLoading(false);
     }
   };
 
+  const loadHistory = async () => {
+    try {
+      const [ordersData, transactionsData] = await Promise.all([
+        getOrders(50),
+        getTransactions(50)
+      ]);
+      setOrders(ordersData);
+      setTransactions(transactionsData);
+    } catch (err) {
+      console.error('Failed to load history:', err);
+    }
+  };
+
   const handleLogout = () => {
     removeToken();
     onLogout();
+  };
+
+  const handleViewChange = async (view) => {
+    setCurrentView(view);
+    if (view === 'history') {
+      await loadHistory();
+    }
+  };
+
+  const handleBalanceUpdate = () => {
+    loadUserProfile();
   };
 
   if (loading) {
@@ -55,75 +82,213 @@ function Dashboard({ onLogout }) {
         </button>
       </header>
 
+      {/* Navigation Tabs */}
+      <div className="dashboard-nav">
+        <button
+          className={`nav-tab ${currentView === 'overview' ? 'active' : ''}`}
+          onClick={() => handleViewChange('overview')}
+        >
+          🏠 Overview
+        </button>
+        <button
+          className={`nav-tab ${currentView === 'trading' ? 'active' : ''}`}
+          onClick={() => handleViewChange('trading')}
+        >
+          💹 Trade
+        </button>
+        <button
+          className={`nav-tab ${currentView === 'history' ? 'active' : ''}`}
+          onClick={() => handleViewChange('history')}
+        >
+          📜 History
+        </button>
+      </div>
+
+      {/* Content Area */}
       <div className="dashboard-content">
-        <div className="welcome-section">
-          <h2>Welcome back, {user.username}! 👋</h2>
-          <p className="user-email">{user.email}</p>
-        </div>
-
-        <div className="account-card">
-          <h3>💰 Your Trading Account</h3>
-          <div className="balance-display">
-            <span className="balance-label">Virtual Balance</span>
-            <span className="balance-amount">
-              ${user.virtual_balance.toLocaleString('en-US', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-              })}
-            </span>
-          </div>
-          <div className="account-info">
-            <div className="info-item">
-              <span className="info-label">Account Status:</span>
-              <span className="info-value status-active">
-                {user.is_active ? '✅ Active' : '❌ Inactive'}
-              </span>
+        {currentView === 'overview' && (
+          <>
+            <div className="welcome-section">
+              <h2>Welcome back, {user.username}! 👋</h2>
+              <p className="user-email">{user.email}</p>
             </div>
-            <div className="info-item">
-              <span className="info-label">Member Since:</span>
-              <span className="info-value">
-                {new Date(user.created_at).toLocaleDateString('en-US', {
-                  year: 'numeric',
-                  month: 'long',
-                  day: 'numeric'
-                })}
-              </span>
+
+            <div className="account-card">
+              <h3>💰 Your Trading Account</h3>
+              <div className="balance-display">
+                <span className="balance-label">Virtual Balance</span>
+                <span className="balance-amount">
+                  ${user.virtual_balance.toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2
+                  })}
+                </span>
+              </div>
+              <div className="account-info">
+                <div className="info-item">
+                  <span className="info-label">Account Status:</span>
+                  <span className="info-value status-active">
+                    {user.is_active ? '✅ Active' : '❌ Inactive'}
+                  </span>
+                </div>
+                <div className="info-item">
+                  <span className="info-label">Member Since:</span>
+                  <span className="info-value">
+                    {new Date(user.created_at).toLocaleDateString('en-US', {
+                      year: 'numeric',
+                      month: 'long',
+                      day: 'numeric'
+                    })}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div className="quick-actions">
+              <button
+                className="action-button primary"
+                onClick={() => handleViewChange('trading')}
+              >
+                💹 Start Trading
+              </button>
+              <button
+                className="action-button secondary"
+                onClick={() => handleViewChange('history')}
+              >
+                📜 View History
+              </button>
+            </div>
+
+            <div className="checkpoint-status">
+              <h3>✅ Checkpoint 2 Progress</h3>
+              <ul>
+                <li>✅ User authentication system</li>
+                <li>✅ JWT token-based security</li>
+                <li>✅ Order placement (BUY/SELL)</li>
+                <li>✅ Portfolio management</li>
+                <li>✅ Transaction tracking</li>
+                <li>⏳ Coming Next: Real market data</li>
+              </ul>
+            </div>
+          </>
+        )}
+
+        {currentView === 'trading' && (
+          <Trading onBalanceUpdate={handleBalanceUpdate} />
+        )}
+
+        {currentView === 'history' && (
+          <div className="history-container">
+            {/* Orders History */}
+            <div className="history-section">
+              <h3>📋 Order History</h3>
+              {orders.length === 0 ? (
+                <div className="empty-state">
+                  <p>No orders yet. Place your first trade!</p>
+                </div>
+              ) : (
+                <div className="history-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Symbol</th>
+                        <th>Type</th>
+                        <th>Quantity</th>
+                        <th>Price</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {orders.map((order) => (
+                        <tr key={order.id}>
+                          <td>
+                            {new Date(order.created_at).toLocaleString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </td>
+                          <td className="symbol-cell">{order.symbol}</td>
+                          <td>
+                            <span className={`type-badge ${order.order_type.toLowerCase()}`}>
+                              {order.order_type}
+                            </span>
+                          </td>
+                          <td>{order.quantity}</td>
+                          <td>${order.price.toFixed(2)}</td>
+                          <td>${order.total_amount.toFixed(2)}</td>
+                          <td>
+                            <span className={`status-badge ${order.status.toLowerCase()}`}>
+                              {order.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+
+            {/* Transactions History */}
+            <div className="history-section">
+              <h3>💳 Transaction History</h3>
+              {transactions.length === 0 ? (
+                <div className="empty-state">
+                  <p>No transactions yet.</p>
+                </div>
+              ) : (
+                <div className="history-table">
+                  <table>
+                    <thead>
+                      <tr>
+                        <th>Date</th>
+                        <th>Symbol</th>
+                        <th>Type</th>
+                        <th>Quantity</th>
+                        <th>Price</th>
+                        <th>Amount</th>
+                        <th>Balance After</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {transactions.map((txn) => (
+                        <tr key={txn.id}>
+                          <td>
+                            {new Date(txn.created_at).toLocaleString('en-US', {
+                              month: 'short',
+                              day: 'numeric',
+                              hour: '2-digit',
+                              minute: '2-digit'
+                            })}
+                          </td>
+                          <td className="symbol-cell">{txn.symbol}</td>
+                          <td>
+                            <span className={`type-badge ${txn.transaction_type.toLowerCase()}`}>
+                              {txn.transaction_type}
+                            </span>
+                          </td>
+                          <td>{txn.quantity}</td>
+                          <td>${txn.price.toFixed(2)}</td>
+                          <td
+                            className={txn.transaction_type === 'BUY' ? 'negative' : 'positive'}
+                          >
+                            {txn.transaction_type === 'BUY' ? '-' : '+'}
+                            ${txn.total_amount.toFixed(2)}
+                          </td>
+                          <td>${txn.balance_after.toFixed(2)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
-        </div>
-
-        <div className="features-grid">
-          <div className="feature-card">
-            <div className="feature-icon">📊</div>
-            <h4>Market Data</h4>
-            <p>Coming in Checkpoint 3</p>
-          </div>
-          <div className="feature-card">
-            <div className="feature-icon">💹</div>
-            <h4>Place Trades</h4>
-            <p>Coming in Checkpoint 2</p>
-          </div>
-          <div className="feature-card">
-            <div className="feature-icon">🤖</div>
-            <h4>Trading Bots</h4>
-            <p>Coming in Checkpoint 4</p>
-          </div>
-          <div className="feature-card">
-            <div className="feature-icon">📈</div>
-            <h4>Portfolio</h4>
-            <p>Coming in Checkpoint 2</p>
-          </div>
-        </div>
-
-        <div className="checkpoint-status">
-          <h3>✅ Checkpoint 1 Complete!</h3>
-          <ul>
-            <li>✅ User authentication system</li>
-            <li>✅ JWT token-based security</li>
-            <li>✅ Protected dashboard</li>
-            <li>✅ User profile management</li>
-          </ul>
-        </div>
+        )}
       </div>
     </div>
   );

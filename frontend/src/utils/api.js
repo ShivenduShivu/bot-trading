@@ -166,3 +166,113 @@ export const getTransactions = async (limit = 50) => {
 
   return await response.json();
 };
+
+// ===== Market Data API =====
+
+/**
+ * Search for stocks
+ */
+export const searchStocks = async (query) => {
+  const token = getToken();
+  
+  const response = await fetch(`${API_BASE_URL}/api/market/search?query=${encodeURIComponent(query)}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to search stocks');
+  }
+
+  return await response.json();
+};
+
+/**
+ * Get detailed stock information
+ */
+export const getStockInfo = async (symbol) => {
+  const token = getToken();
+  
+  const response = await fetch(`${API_BASE_URL}/api/market/stock/${symbol}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch stock info for ${symbol}`);
+  }
+
+  return await response.json();
+};
+
+/**
+ * Get current stock price
+ */
+export const getStockPrice = async (symbol) => {
+  const token = getToken();
+  
+  const response = await fetch(`${API_BASE_URL}/api/market/price/${symbol}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch price for ${symbol}`);
+  }
+
+  return await response.json();
+};
+
+/**
+ * Get historical stock data for charts
+ */
+export const getStockHistory = async (symbol, period = '1mo', interval = '1d') => {
+  const token = getToken();
+  
+  const response = await fetch(
+    `${API_BASE_URL}/api/market/history/${symbol}?period=${period}&interval=${interval}`,
+    {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'application/json',
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error(`Failed to fetch historical data for ${symbol}`);
+  }
+
+  return await response.json();
+};
+
+/**
+ * Get market status
+ */
+export const getMarketStatus = async () => {
+  const token = getToken();
+  
+  const response = await fetch(`${API_BASE_URL}/api/market/status`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch market status');
+  }
+
+  return await response.json();
+};

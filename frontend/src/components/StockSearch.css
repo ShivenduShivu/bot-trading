@@ -1,0 +1,238 @@
+/* Stock Search Component Styles */
+
+.stock-search {
+  width: 100%;
+}
+
+.search-input-container {
+  position: relative;
+  margin-bottom: 15px;
+}
+
+.search-input {
+  width: 100%;
+  padding: 15px 45px 15px 15px;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.3s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.search-input:disabled {
+  background: #f7fafc;
+  cursor: not-allowed;
+}
+
+.clear-button {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: #e2e8f0;
+  border: none;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4a5568;
+  font-size: 1.2rem;
+  transition: background 0.2s;
+}
+
+.clear-button:hover {
+  background: #cbd5e0;
+}
+
+.search-status {
+  padding: 10px;
+  color: #718096;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+.search-error {
+  padding: 10px;
+  background: #fed7d7;
+  color: #c53030;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  margin-bottom: 10px;
+}
+
+.loading-info {
+  padding: 20px;
+  text-align: center;
+  color: #667eea;
+  font-weight: 600;
+}
+
+/* Search Results Dropdown */
+.search-results {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+  max-height: 300px;
+  overflow-y: auto;
+  z-index: 1000;
+  margin-top: 5px;
+}
+
+.search-result-item {
+  padding: 15px;
+  cursor: pointer;
+  border-bottom: 1px solid #e2e8f0;
+  transition: background 0.2s;
+}
+
+.search-result-item:last-child {
+  border-bottom: none;
+}
+
+.search-result-item:hover {
+  background: #f7fafc;
+}
+
+.result-symbol {
+  font-weight: bold;
+  color: #2d3748;
+  font-size: 1.1rem;
+  margin-bottom: 3px;
+}
+
+.result-name {
+  color: #718096;
+  font-size: 0.9rem;
+  margin-bottom: 3px;
+}
+
+.result-exchange {
+  color: #a0aec0;
+  font-size: 0.8rem;
+}
+
+/* Selected Stock Info Card */
+.selected-stock-info {
+  background: white;
+  border: 2px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 15px;
+}
+
+.stock-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: 20px;
+  border-bottom: 2px solid #e2e8f0;
+  margin-bottom: 20px;
+}
+
+.stock-header h3 {
+  margin: 0 0 5px 0;
+  font-size: 1.8rem;
+  color: #2d3748;
+}
+
+.stock-name {
+  margin: 0;
+  color: #718096;
+  font-size: 1rem;
+}
+
+.stock-price-main {
+  text-align: right;
+}
+
+.current-price {
+  font-size: 2rem;
+  font-weight: bold;
+  color: #2d3748;
+  margin-bottom: 5px;
+}
+
+.price-change {
+  font-size: 1rem;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 6px;
+  display: inline-block;
+}
+
+.price-change.positive {
+  background: #c6f6d5;
+  color: #2f855a;
+}
+
+.price-change.negative {
+  background: #fed7d7;
+  color: #c53030;
+}
+
+/* Stock Details Grid */
+.stock-details-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 15px;
+}
+
+.detail-box {
+  background: #f7fafc;
+  padding: 15px;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+.detail-label {
+  font-size: 0.8rem;
+  color: #718096;
+  margin-bottom: 5px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.detail-value {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #2d3748;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .stock-header {
+    flex-direction: column;
+    gap: 15px;
+  }
+
+  .stock-price-main {
+    text-align: left;
+  }
+
+  .stock-details-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .current-price {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .stock-details-grid {
+    grid-template-columns: 1fr;
+  }
+}

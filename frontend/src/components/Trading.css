@@ -333,3 +333,24 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* Additional styles for stock search integration */
+
+.full-width {
+  grid-column: 1 / -1;
+}
+
+.stock-search {
+  position: relative;
+}
+
+/* Adjust form layout when stock search is present */
+.order-form-card .form-group.full-width {
+  margin-bottom: 20px;
+}
+
+/* Make sure dropdowns in stock search don't overflow */
+.order-form-card {
+  position: relative;
+  overflow: visible;
+}

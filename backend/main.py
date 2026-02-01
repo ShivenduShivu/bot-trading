@@ -2,7 +2,7 @@
 Paper Trading Platform - Backend API
 FastAPI server with authentication and trading
 """
-
+from market_data import market_service
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
@@ -284,6 +284,105 @@ async def get_transactions(
     transactions = get_user_transactions(db, current_user.id, limit)
     return transactions
 
+# ===== Market Data Endpoints =====
+
+@app.get("/api/market/search")
+async def search_stocks(
+    query: str,
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Search for stocks by symbol
+    """
+    if not query or len(query) < 1:
+        raise HTTPException(
+            status_code=400,
+            detail="Search query must be at least 1 character"
+        )
+    
+    results = market_service.search_stock(query)
+    return {"results": results}
+
+
+@app.get("/api/market/stock/{symbol}")
+async def get_stock_info(
+    symbol: str,
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Get detailed information about a stock
+    """
+    stock_data = market_service.get_stock_info(symbol)
+    
+    if not stock_data:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Stock symbol '{symbol}' not found"
+        )
+    
+    return stock_data
+
+
+@app.get("/api/market/price/{symbol}")
+async def get_stock_price(
+    symbol: str,
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Get current price for a stock
+    """
+    price = market_service.get_current_price(symbol)
+    
+    if price is None:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Could not fetch price for '{symbol}'"
+        )
+    
+    return {
+        "symbol": symbol.upper(),
+        "price": price,
+        "timestamp": datetime.utcnow().isoformat()
+    }
+
+
+@app.get("/api/market/history/{symbol}")
+async def get_stock_history(
+    symbol: str,
+    period: str = "1mo",
+    interval: str = "1d",
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Get historical price data for charts
+    
+    Valid periods: 1d, 5d, 1mo, 3mo, 6mo, 1y, 2y, 5y, 10y, ytd, max
+    Valid intervals: 1m, 2m, 5m, 15m, 30m, 60m, 90m, 1h, 1d, 5d, 1wk, 1mo, 3mo
+    """
+    historical_data = market_service.get_historical_data(symbol, period, interval)
+    
+    if not historical_data:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Could not fetch historical data for '{symbol}'"
+        )
+    
+    return {
+        "symbol": symbol.upper(),
+        "period": period,
+        "interval": interval,
+        "data": historical_data
+    }
+
+
+@app.get("/api/market/status")
+async def get_market_status(
+    current_user: User = Depends(get_current_active_user)
+):
+    """
+    Get current market status
+    """
+    return market_service.get_market_status()
 
 # Run server
 if __name__ == "__main__":

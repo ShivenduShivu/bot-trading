@@ -1,0 +1,111 @@
+/* Price Chart Component Styles */
+
+.price-chart-container {
+  background: white;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.chart-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+.chart-header h3 {
+  margin: 0;
+  color: #2d3748;
+  font-size: 1.3rem;
+}
+
+.period-selector {
+  display: flex;
+  gap: 5px;
+  background: #f7fafc;
+  padding: 5px;
+  border-radius: 8px;
+}
+
+.period-selector button {
+  background: transparent;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 6px;
+  font-weight: 600;
+  color: #718096;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.9rem;
+}
+
+.period-selector button:hover {
+  background: #e2e8f0;
+  color: #2d3748;
+}
+
+.period-selector button.active {
+  background: #667eea;
+  color: white;
+}
+
+.chart-canvas {
+  width: 100%;
+  height: 400px;
+  position: relative;
+}
+
+.chart-loading {
+  text-align: center;
+  padding: 100px 20px;
+  color: #667eea;
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.chart-error {
+  text-align: center;
+  padding: 60px 20px;
+  color: #c53030;
+  background: #fed7d7;
+  border-radius: 8px;
+  margin: 20px 0;
+}
+
+.price-chart-empty {
+  background: #f7fafc;
+  border: 2px dashed #cbd5e0;
+  border-radius: 12px;
+  padding: 80px 20px;
+  text-align: center;
+}
+
+.price-chart-empty p {
+  color: #718096;
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .chart-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .period-selector {
+    justify-content: center;
+  }
+
+  .period-selector button {
+    flex: 1;
+    padding: 10px 12px;
+  }
+
+  .chart-canvas {
+    height: 300px;
+  }
+}

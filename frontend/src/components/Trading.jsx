@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { createOrder, getPortfolio, getUserProfile } from '../utils/api';
 import './Trading.css';
 import StockSearch from './StockSearch';
+import PriceChart from './PriceChart';
 
 function Trading({ onBalanceUpdate }) {
     const [formData, setFormData] = useState({
@@ -15,6 +16,7 @@ function Trading({ onBalanceUpdate }) {
     const [success, setSuccess] = useState('');
     const [portfolio, setPortfolio] = useState([]);
     const [balance, setBalance] = useState(0);
+    const [selectedSymbol, setSelectedSymbol] = useState('');
 
     useEffect(() => {
         loadData();
@@ -141,6 +143,7 @@ function Trading({ onBalanceUpdate }) {
                                             symbol: stock.symbol,
                                             price: stock.current_price.toString()
                                         });
+                                        setSelectedSymbol(stock.symbol);
                                     }}
                                 />
                             </div>
@@ -273,6 +276,12 @@ function Trading({ onBalanceUpdate }) {
                     )}
                 </div>
             </div>
+            {/* Price Chart */}
+            {selectedSymbol && (
+                <div className="chart-section">
+                    <PriceChart symbol={selectedSymbol} />
+                </div>
+            )}
         </div>
     );
 }

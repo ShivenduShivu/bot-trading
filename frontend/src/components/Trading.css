@@ -354,3 +354,8 @@
   position: relative;
   overflow: visible;
 }
+
+/* Chart Section */
+.chart-section {
+  margin-top: 30px;
+}

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { getUserProfile, removeToken, getOrders, getTransactions } from '../utils/api';
 import Trading from './Trading';
 import './Dashboard.css';
+import BotBuilder from './BotBuilder';
 
 function Dashboard({ onLogout }) {
   const [user, setUser] = useState(null);
@@ -97,6 +98,12 @@ function Dashboard({ onLogout }) {
           💹 Trade
         </button>
         <button
+          className={`nav-tab ${currentView === 'bots' ? 'active' : ''}`}
+          onClick={() => handleViewChange('bots')}
+        >
+          🤖 Bots
+        </button>
+        <button
           className={`nav-tab ${currentView === 'history' ? 'active' : ''}`}
           onClick={() => handleViewChange('history')}
         >
@@ -175,6 +182,10 @@ function Dashboard({ onLogout }) {
 
         {currentView === 'trading' && (
           <Trading onBalanceUpdate={handleBalanceUpdate} />
+        )}
+        
+        {currentView === 'bots' && (
+          <BotBuilder />
         )}
 
         {currentView === 'history' && (

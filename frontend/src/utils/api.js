@@ -276,3 +276,156 @@ export const getMarketStatus = async () => {
 
   return await response.json();
 };
+
+// ===== Bot/Strategy API =====
+
+/**
+ * Run a backtest
+ */
+export const runBacktest = async (backtestData) => {
+  const token = getToken();
+  
+  const response = await fetch(`${API_BASE_URL}/api/strategies/backtest`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(backtestData),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to run backtest');
+  }
+
+  return await response.json();
+};
+
+/**
+ * Create a strategy
+ */
+export const createStrategy = async (strategyData) => {
+  const token = getToken();
+  
+  const response = await fetch(`${API_BASE_URL}/api/strategies/create`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(strategyData),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to create strategy');
+  }
+
+  return await response.json();
+};
+
+/**
+ * Get all user strategies
+ */
+export const getStrategies = async () => {
+  const token = getToken();
+  
+  const response = await fetch(`${API_BASE_URL}/api/strategies`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch strategies');
+  }
+
+  return await response.json();
+};
+
+/**
+ * Get a specific strategy
+ */
+export const getStrategy = async (strategyId) => {
+  const token = getToken();
+  
+  const response = await fetch(`${API_BASE_URL}/api/strategies/${strategyId}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch strategy');
+  }
+
+  return await response.json();
+};
+
+/**
+ * Delete a strategy
+ */
+export const deleteStrategy = async (strategyId) => {
+  const token = getToken();
+  
+  const response = await fetch(`${API_BASE_URL}/api/strategies/${strategyId}`, {
+    method: 'DELETE',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to delete strategy');
+  }
+
+  return await response.json();
+};
+
+/**
+ * Get backtest history
+ */
+export const getBacktests = async (limit = 20) => {
+  const token = getToken();
+  
+  const response = await fetch(`${API_BASE_URL}/api/backtests?limit=${limit}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch backtests');
+  }
+
+  return await response.json();
+};
+
+/**
+ * Get a specific backtest
+ */
+export const getBacktest = async (backtestId) => {
+  const token = getToken();
+  
+  const response = await fetch(`${API_BASE_URL}/api/backtests/${backtestId}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch backtest');
+  }
+
+  return await response.json();
+};

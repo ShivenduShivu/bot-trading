@@ -17,7 +17,11 @@ sqlalchemy==2.0.25
 # Email validation
 email-validator==2.1.0
 
-# NEW: Market Data
+# Market Data
 yfinance==0.2.36
 requests==2.31.0
 pandas==2.2.0
+
+# Technical Analysis
+ta-lib==0.6.8
+numpy==2.4.2

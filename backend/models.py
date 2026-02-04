@@ -147,3 +147,99 @@ class Transaction(Base):
 
     def __repr__(self):
         return f"<Transaction {self.transaction_type} {self.quantity} {self.symbol}>"
+    
+# ... existing User, Portfolio, Order, Transaction models ...
+
+class StrategyType(str, enum.Enum):
+    """Enum for strategy types"""
+    SMA_CROSSOVER = "SMA_CROSSOVER"
+    RSI = "RSI"
+    MACD = "MACD"
+    CUSTOM = "CUSTOM"
+
+
+class StrategyStatus(str, enum.Enum):
+    """Enum for strategy status"""
+    INACTIVE = "INACTIVE"
+    ACTIVE = "ACTIVE"
+    BACKTESTING = "BACKTESTING"
+    PAUSED = "PAUSED"
+
+
+class Strategy(Base):
+    """
+    Strategy table - stores user-created trading bots/strategies
+    """
+    __tablename__ = "strategies"
+
+    id = Column(Integer, primary_key=True, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    # Strategy details
+    name = Column(String, nullable=False)
+    description = Column(String, nullable=True)
+    strategy_type = Column(Enum(StrategyType), nullable=False)
+    
+    # Strategy parameters (stored as JSON string)
+    # Example: {"short_period": 20, "long_period": 50, "symbol": "AAPL"}
+    parameters = Column(String, nullable=False)  # JSON string
+    
+    # Status
+    status = Column(Enum(StrategyStatus), default=StrategyStatus.INACTIVE)
+    
+    # Performance metrics
+    total_trades = Column(Integer, default=0)
+    winning_trades = Column(Integer, default=0)
+    total_profit_loss = Column(Float, default=0.0)
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+    updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
+    last_run_at = Column(DateTime, nullable=True)
+
+    # Relationships
+    user = relationship("User", backref="strategies")
+
+    def __repr__(self):
+        return f"<Strategy {self.name} ({self.strategy_type})>"
+
+
+class BacktestResult(Base):
+    """
+    Backtest results - stores performance of strategy on historical data
+    """
+    __tablename__ = "backtest_results"
+
+    id = Column(Integer, primary_key=True, index=True)
+    strategy_id = Column(Integer, ForeignKey("strategies.id"), nullable=True)  # ✅ FIXED - Now optional
+    user_id = Column(Integer, ForeignKey("users.id"), nullable=False)
+    
+    # Backtest period
+    start_date = Column(DateTime, nullable=False)
+    end_date = Column(DateTime, nullable=False)
+    
+    # Performance metrics
+    initial_capital = Column(Float, nullable=False)
+    final_capital = Column(Float, nullable=False)
+    total_return = Column(Float, nullable=False)  # Percentage
+    total_trades = Column(Integer, nullable=False)
+    winning_trades = Column(Integer, nullable=False)
+    losing_trades = Column(Integer, nullable=False)
+    win_rate = Column(Float, nullable=False)  # Percentage
+    
+    # Risk metrics
+    max_drawdown = Column(Float, nullable=True)
+    sharpe_ratio = Column(Float, nullable=True)
+    
+    # Trade details (stored as JSON)
+    trades = Column(String, nullable=True)  # JSON array of trades
+    
+    # Timestamps
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+    # Relationships
+    strategy = relationship("Strategy")
+    user = relationship("User")
+
+    def __repr__(self):
+        return f"<BacktestResult {self.strategy_id}: {self.total_return}%>"

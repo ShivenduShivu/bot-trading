@@ -8,9 +8,10 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 from datetime import timedelta, datetime
-from typing import List
+from typing import List, Optional
 from pydantic import BaseModel
 import uvicorn
+import json
 
 from database import engine, get_db, Base
 from models import User, Portfolio, Order, Transaction, OrderType
@@ -24,6 +25,9 @@ from trading import (
     execute_buy_order, execute_sell_order,
     get_user_portfolio, get_user_orders, get_user_transactions
 )
+from strategy_engine import strategy_engine
+from models import Strategy, BacktestResult, StrategyType, StrategyStatus
+
 
 # Create database tables
 Base.metadata.create_all(bind=engine)
@@ -383,6 +387,308 @@ async def get_market_status(
     Get current market status
     """
     return market_service.get_market_status()
+
+# ===== Strategy/Bot Endpoints =====
+
+class StrategyCreate(BaseModel):
+    """Schema for creating a strategy"""
+    name: str
+    description: Optional[str] = None
+    strategy_type: str  # "SMA_CROSSOVER", "RSI", "MACD"
+    parameters: dict  # Strategy-specific parameters
+
+
+class StrategyResponse(BaseModel):
+    """Schema for strategy response"""
+    id: int
+    name: str
+    description: Optional[str]
+    strategy_type: str
+    parameters: str
+    status: str
+    total_trades: int
+    winning_trades: int
+    total_profit_loss: float
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+class BacktestRequest(BaseModel):
+    """Schema for backtest request"""
+    strategy_type: str
+    symbol: str
+    parameters: dict
+    start_date: str  # YYYY-MM-DD
+    end_date: str    # YYYY-MM-DD
+    initial_capital: float = 10000.0
+
+
+class BacktestResponse(BaseModel):
+    """Schema for backtest results"""
+    id: int
+    strategy_id: Optional[int]
+    start_date: datetime
+    end_date: datetime
+    initial_capital: float
+    final_capital: float
+    total_return: float
+    total_trades: int
+    winning_trades: int
+    losing_trades: int
+    win_rate: float
+    trades: Optional[str]
+    created_at: datetime
+    
+    class Config:
+        from_attributes = True
+
+
+@app.post("/api/strategies/create", response_model=StrategyResponse)
+async def create_strategy(
+    strategy: StrategyCreate,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Create a new trading strategy/bot
+    """
+    # Validate strategy type
+    valid_types = ["SMA_CROSSOVER", "RSI", "MACD"]
+    if strategy.strategy_type not in valid_types:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid strategy type. Must be one of: {', '.join(valid_types)}"
+        )
+    
+    # Create strategy
+    new_strategy = Strategy(
+        user_id=current_user.id,
+        name=strategy.name,
+        description=strategy.description,
+        strategy_type=StrategyType[strategy.strategy_type],
+        parameters=json.dumps(strategy.parameters),
+        status=StrategyStatus.INACTIVE
+    )
+    
+    db.add(new_strategy)
+    db.commit()
+    db.refresh(new_strategy)
+    
+    return new_strategy
+
+
+@app.get("/api/strategies", response_model=List[StrategyResponse])
+async def get_user_strategies(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get all strategies for current user
+    """
+    strategies = db.query(Strategy).filter(
+        Strategy.user_id == current_user.id
+    ).order_by(Strategy.created_at.desc()).all()
+    
+    return strategies
+
+
+@app.get("/api/strategies/{strategy_id}", response_model=StrategyResponse)
+async def get_strategy(
+    strategy_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get a specific strategy
+    """
+    strategy = db.query(Strategy).filter(
+        Strategy.id == strategy_id,
+        Strategy.user_id == current_user.id
+    ).first()
+    
+    if not strategy:
+        raise HTTPException(status_code=404, detail="Strategy not found")
+    
+    return strategy
+
+
+@app.delete("/api/strategies/{strategy_id}")
+async def delete_strategy(
+    strategy_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Delete a strategy
+    """
+    strategy = db.query(Strategy).filter(
+        Strategy.id == strategy_id,
+        Strategy.user_id == current_user.id
+    ).first()
+    
+    if not strategy:
+        raise HTTPException(status_code=404, detail="Strategy not found")
+    
+    db.delete(strategy)
+    db.commit()
+    
+    return {"message": "Strategy deleted successfully"}
+
+
+@app.post("/api/strategies/backtest")
+async def backtest_strategy(
+    backtest: BacktestRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Run a backtest for a strategy
+    Returns performance metrics and trade history
+    """
+    try:
+        # Validate and parse dates (ensure timezone-naive for database)
+        try:
+            start_date = datetime.strptime(backtest.start_date, '%Y-%m-%d').replace(tzinfo=None)
+            end_date = datetime.strptime(backtest.end_date, '%Y-%m-%d').replace(tzinfo=None)
+        except ValueError as ve:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid date format. Use YYYY-MM-DD: {str(ve)}"
+            )
+        
+        if start_date >= end_date:
+            raise HTTPException(
+                status_code=400,
+                detail="Start date must be before end date"
+            )
+        
+        # Run backtest based on strategy type
+        result = None
+        
+        if backtest.strategy_type == "SMA_CROSSOVER":
+            params = backtest.parameters
+            if 'short_period' not in params or 'long_period' not in params:
+                raise HTTPException(
+                    status_code=400,
+                    detail="SMA_CROSSOVER requires 'short_period' and 'long_period' parameters"
+                )
+            
+            result = strategy_engine.sma_crossover_strategy(
+                symbol=backtest.symbol,
+                short_period=int(params['short_period']),
+                long_period=int(params['long_period']),
+                start_date=backtest.start_date,
+                end_date=backtest.end_date,
+                initial_capital=backtest.initial_capital
+            )
+        
+        elif backtest.strategy_type == "RSI":
+            params = backtest.parameters
+            if 'rsi_period' not in params or 'oversold' not in params or 'overbought' not in params:
+                raise HTTPException(
+                    status_code=400,
+                    detail="RSI requires 'rsi_period', 'oversold', and 'overbought' parameters"
+                )
+            
+            result = strategy_engine.rsi_strategy(
+                symbol=backtest.symbol,
+                rsi_period=int(params['rsi_period']),
+                oversold_threshold=int(params['oversold']),
+                overbought_threshold=int(params['overbought']),
+                start_date=backtest.start_date,
+                end_date=backtest.end_date,
+                initial_capital=backtest.initial_capital
+            )
+        
+        elif backtest.strategy_type == "MACD":
+            result = strategy_engine.macd_strategy(
+                symbol=backtest.symbol,
+                start_date=backtest.start_date,
+                end_date=backtest.end_date,
+                initial_capital=backtest.initial_capital
+            )
+        
+        else:
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid strategy type"
+            )
+        
+        # Check for errors
+        if 'error' in result:
+            raise HTTPException(
+                status_code=400,
+                detail=result['error']
+            )
+        
+        # Save backtest result
+        backtest_result = BacktestResult(
+            strategy_id=None,  # Not linked to a strategy yet
+            user_id=current_user.id,
+            start_date=start_date,
+            end_date=end_date,
+            initial_capital=backtest.initial_capital,
+            final_capital=result['final_capital'],
+            total_return=result['total_return'],
+            total_trades=result['total_trades'],
+            winning_trades=result['winning_trades'],
+            losing_trades=result['losing_trades'],
+            win_rate=result['win_rate'],
+            trades=json.dumps(result['trades'])
+        )
+        
+        db.add(backtest_result)
+        db.commit()
+        db.refresh(backtest_result)
+        
+        return {
+            "backtest_id": backtest_result.id,
+            "results": result
+        }
+    
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=f"Invalid date format: {str(e)}")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Backtest failed: {str(e)}")
+
+
+@app.get("/api/backtests", response_model=List[BacktestResponse])
+async def get_backtests(
+    limit: int = 20,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get backtest history for current user
+    """
+    backtests = db.query(BacktestResult).filter(
+        BacktestResult.user_id == current_user.id
+    ).order_by(BacktestResult.created_at.desc()).limit(limit).all()
+    
+    return backtests
+
+
+@app.get("/api/backtests/{backtest_id}", response_model=BacktestResponse)
+async def get_backtest(
+    backtest_id: int,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get a specific backtest result
+    """
+    backtest = db.query(BacktestResult).filter(
+        BacktestResult.id == backtest_id,
+        BacktestResult.user_id == current_user.id
+    ).first()
+    
+    if not backtest:
+        raise HTTPException(status_code=404, detail="Backtest not found")
+    
+    return backtest
+
 
 # Run server
 if __name__ == "__main__":

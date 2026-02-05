@@ -14,7 +14,7 @@ import uvicorn
 import json
 
 from database import engine, get_db, Base
-from models import User, Portfolio, Order, Transaction, OrderType
+from models import User, Portfolio, Order, Transaction, OrderType, OrderStatus, Strategy, BacktestResult, StrategyType, StrategyStatus
 from auth import (
     UserCreate, UserResponse, Token,
     create_user, authenticate_user, create_access_token,
@@ -26,7 +26,6 @@ from trading import (
     get_user_portfolio, get_user_orders, get_user_transactions
 )
 from strategy_engine import strategy_engine
-from models import Strategy, BacktestResult, StrategyType, StrategyStatus
 
 
 # Create database tables
@@ -689,6 +688,226 @@ async def get_backtest(
     
     return backtest
 
+# ===== Analytics Endpoints =====
+
+@app.get("/api/analytics/portfolio-performance")
+async def get_portfolio_performance(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get portfolio performance over time (equity curve)
+    """
+    # Get all transactions ordered by date
+    transactions = db.query(Transaction).filter(
+        Transaction.user_id == current_user.id
+    ).order_by(Transaction.created_at.asc()).all()
+    
+    if not transactions:
+        return {
+            "equity_curve": [],
+            "total_profit_loss": 0,
+            "total_return_percent": 0
+        }
+    
+    # Build equity curve
+    equity_curve = []
+    initial_balance = 100000.0  # Starting balance
+    
+    for txn in transactions:
+        equity_curve.append({
+            "date": txn.created_at.strftime('%Y-%m-%d'),
+            "balance": round(txn.balance_after, 2),
+            "profit_loss": round(txn.balance_after - initial_balance, 2)
+        })
+    
+    # Calculate metrics
+    current_balance = transactions[-1].balance_after if transactions else initial_balance
+    total_profit_loss = current_balance - initial_balance
+    total_return_percent = (total_profit_loss / initial_balance) * 100
+    
+    return {
+        "equity_curve": equity_curve,
+        "total_profit_loss": round(total_profit_loss, 2),
+        "total_return_percent": round(total_return_percent, 2),
+        "initial_balance": initial_balance,
+        "current_balance": round(current_balance, 2)
+    }
+
+
+@app.get("/api/analytics/trade-statistics")
+async def get_trade_statistics(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get detailed trading statistics
+    """
+    # Get all executed orders
+    orders = db.query(Order).filter(
+        Order.user_id == current_user.id,
+        Order.status == OrderStatus.EXECUTED
+    ).all()
+    
+    if not orders:
+        return {
+            "total_trades": 0,
+            "winning_trades": 0,
+            "losing_trades": 0,
+            "win_rate": 0,
+            "average_win": 0,
+            "average_loss": 0,
+            "largest_win": 0,
+            "largest_loss": 0,
+            "profit_factor": 0
+        }
+    
+    # Pair buy and sell orders
+    buy_orders = [o for o in orders if o.order_type == OrderType.BUY]
+    sell_orders = [o for o in orders if o.order_type == OrderType.SELL]
+    
+    wins = []
+    losses = []
+    
+    # Simple P&L calculation (match orders by symbol)
+    for sell in sell_orders:
+        # Find corresponding buy
+        buys = [b for b in buy_orders if b.symbol == sell.symbol and b.created_at < sell.created_at]
+        if buys:
+            buy = buys[-1]  # Most recent buy before this sell
+            profit = (sell.price - buy.price) * min(buy.quantity, sell.quantity)
+            if profit > 0:
+                wins.append(profit)
+            else:
+                losses.append(abs(profit))
+    
+    total_trades = len(wins) + len(losses)
+    winning_trades = len(wins)
+    losing_trades = len(losses)
+    win_rate = (winning_trades / total_trades * 100) if total_trades > 0 else 0
+    
+    average_win = sum(wins) / len(wins) if wins else 0
+    average_loss = sum(losses) / len(losses) if losses else 0
+    largest_win = max(wins) if wins else 0
+    largest_loss = max(losses) if losses else 0
+    
+    total_wins = sum(wins)
+    total_losses = sum(losses)
+    profit_factor = total_wins / total_losses if total_losses > 0 else 0
+    
+    return {
+        "total_trades": total_trades,
+        "winning_trades": winning_trades,
+        "losing_trades": losing_trades,
+        "win_rate": round(win_rate, 2),
+        "average_win": round(average_win, 2),
+        "average_loss": round(average_loss, 2),
+        "largest_win": round(largest_win, 2),
+        "largest_loss": round(largest_loss, 2),
+        "profit_factor": round(profit_factor, 2)
+    }
+
+
+@app.get("/api/analytics/backtest-comparison")
+async def compare_backtests(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Compare all backtest results
+    """
+    backtests = db.query(BacktestResult).filter(
+        BacktestResult.user_id == current_user.id
+    ).order_by(BacktestResult.created_at.desc()).limit(10).all()
+    
+    if not backtests:
+        return {"backtests": []}
+    
+    comparison = []
+    for bt in backtests:
+        comparison.append({
+            "id": bt.id,
+            "date": bt.created_at.strftime('%Y-%m-%d'),
+            "total_return": round(bt.total_return, 2),
+            "total_trades": bt.total_trades,
+            "win_rate": round(bt.win_rate, 2),
+            "initial_capital": bt.initial_capital,
+            "final_capital": bt.final_capital
+        })
+    
+    return {"backtests": comparison}
+
+
+@app.get("/api/analytics/risk-metrics")
+async def get_risk_metrics(
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Calculate risk-adjusted performance metrics
+    """
+    # Get all transactions
+    transactions = db.query(Transaction).filter(
+        Transaction.user_id == current_user.id
+    ).order_by(Transaction.created_at.asc()).all()
+    
+    if len(transactions) < 2:
+        return {
+            "sharpe_ratio": 0,
+            "max_drawdown": 0,
+            "max_drawdown_percent": 0,
+            "volatility": 0
+        }
+    
+    # Calculate daily returns
+    returns = []
+    for i in range(1, len(transactions)):
+        prev_balance = transactions[i-1].balance_after
+        curr_balance = transactions[i].balance_after
+        daily_return = (curr_balance - prev_balance) / prev_balance
+        returns.append(daily_return)
+    
+    if not returns:
+        return {
+            "sharpe_ratio": 0,
+            "max_drawdown": 0,
+            "max_drawdown_percent": 0,
+            "volatility": 0
+        }
+    
+    # Calculate metrics
+    import numpy as np
+    
+    avg_return = np.mean(returns)
+    std_return = np.std(returns)
+    
+    # Sharpe Ratio (assuming risk-free rate of 0 for simplicity)
+    sharpe_ratio = (avg_return / std_return * np.sqrt(252)) if std_return > 0 else 0
+    
+    # Max Drawdown
+    balances = [t.balance_after for t in transactions]
+    peak = balances[0]
+    max_drawdown = 0
+    max_drawdown_percent = 0
+    
+    for balance in balances:
+        if balance > peak:
+            peak = balance
+        drawdown = peak - balance
+        drawdown_percent = (drawdown / peak * 100) if peak > 0 else 0
+        if drawdown > max_drawdown:
+            max_drawdown = drawdown
+            max_drawdown_percent = drawdown_percent
+    
+    # Volatility (annualized)
+    volatility = std_return * np.sqrt(252) * 100
+    
+    return {
+        "sharpe_ratio": round(float(sharpe_ratio), 2),
+        "max_drawdown": round(float(max_drawdown), 2),
+        "max_drawdown_percent": round(float(max_drawdown_percent), 2),
+        "volatility": round(float(volatility), 2)
+    }
 
 # Run server
 if __name__ == "__main__":

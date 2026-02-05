@@ -3,6 +3,7 @@ import { getUserProfile, removeToken, getOrders, getTransactions } from '../util
 import Trading from './Trading';
 import './Dashboard.css';
 import BotBuilder from './BotBuilder';
+import Analytics from './Analytics';
 
 function Dashboard({ onLogout }) {
   const [user, setUser] = useState(null);
@@ -104,6 +105,12 @@ function Dashboard({ onLogout }) {
           🤖 Bots
         </button>
         <button
+          className={`nav-tab ${currentView === 'analytics' ? 'active' : ''}`}
+          onClick={() => handleViewChange('analytics')}
+        >
+          📊 Analytics
+        </button>
+        <button
           className={`nav-tab ${currentView === 'history' ? 'active' : ''}`}
           onClick={() => handleViewChange('history')}
         >
@@ -183,9 +190,13 @@ function Dashboard({ onLogout }) {
         {currentView === 'trading' && (
           <Trading onBalanceUpdate={handleBalanceUpdate} />
         )}
-        
+
         {currentView === 'bots' && (
           <BotBuilder />
+        )}
+        
+        {currentView === 'analytics' && (
+          <Analytics />
         )}
 
         {currentView === 'history' && (

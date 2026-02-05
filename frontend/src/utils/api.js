@@ -429,3 +429,89 @@ export const getBacktest = async (backtestId) => {
 
   return await response.json();
 };
+
+// ===== Analytics API =====
+
+/**
+ * Get portfolio performance (equity curve)
+ */
+export const getPortfolioPerformance = async () => {
+  const token = getToken();
+  
+  const response = await fetch(`${API_BASE_URL}/api/analytics/portfolio-performance`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch portfolio performance');
+  }
+
+  return await response.json();
+};
+
+/**
+ * Get trade statistics
+ */
+export const getTradeStatistics = async () => {
+  const token = getToken();
+  
+  const response = await fetch(`${API_BASE_URL}/api/analytics/trade-statistics`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch trade statistics');
+  }
+
+  return await response.json();
+};
+
+/**
+ * Get backtest comparison
+ */
+export const getBacktestComparison = async () => {
+  const token = getToken();
+  
+  const response = await fetch(`${API_BASE_URL}/api/analytics/backtest-comparison`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch backtest comparison');
+  }
+
+  return await response.json();
+};
+
+/**
+ * Get risk metrics
+ */
+export const getRiskMetrics = async () => {
+  const token = getToken();
+  
+  const response = await fetch(`${API_BASE_URL}/api/analytics/risk-metrics`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+  });
+
+  if (!response.ok) {
+    throw new Error('Failed to fetch risk metrics');
+  }
+
+  return await response.json();
+};

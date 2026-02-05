@@ -1,4 +1,4 @@
-# 📈 Paper Trading Platform
+# 📈 Paper Trading Platform(Work IN PROGRESS)
 
 A production-ready paper trading platform for manual and algorithmic trading.
 

@@ -2,8 +2,8 @@
  * API Helper Functions
  * Centralized API calls to backend
  */
-
-const API_BASE_URL = 'http://localhost:8000';
+// API Configuration
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:8000';
 
 // ===== Authentication =====
 
@@ -511,6 +511,56 @@ export const getRiskMetrics = async () => {
 
   if (!response.ok) {
     throw new Error('Failed to fetch risk metrics');
+  }
+
+  return await response.json();
+};
+
+/**
+ * Generate strategy from AI prompt
+ */
+export const generateStrategyFromAI = async (prompt) => {
+  const token = getToken();
+  
+  const response = await fetch(`${API_BASE_URL}/api/ai/generate-strategy`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ prompt }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to generate strategy');
+  }
+
+  return await response.json();
+};
+
+/**
+ * Optimize strategy parameters
+ */
+export const optimizeStrategy = async (strategyType, symbol, parameters) => {
+  const token = getToken();
+  
+  const response = await fetch(`${API_BASE_URL}/api/ai/optimize-strategy`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      strategy_type: strategyType,
+      symbol: symbol,
+      parameters: parameters,
+    }),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.detail || 'Failed to optimize strategy');
   }
 
   return await response.json();

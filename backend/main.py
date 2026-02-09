@@ -2,6 +2,7 @@
 Paper Trading Platform - Backend API
 FastAPI server with authentication and trading
 """
+import os
 from market_data import market_service
 from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -27,7 +28,6 @@ from trading import (
 )
 from strategy_engine import strategy_engine
 
-
 # Create database tables
 Base.metadata.create_all(bind=engine)
 
@@ -39,9 +39,20 @@ app = FastAPI(
 )
 
 # Configure CORS
+# Allow requests from frontend (update for production)
+origins = [
+    "http://localhost:5173",  # Vite dev server
+    "http://localhost:3000",  # Alternative React port
+    "http://127.0.0.1:5173",
+    os.getenv("ALLOWED_ORIGINS", ""),  # Production frontend URL
+]
+
+# Remove empty strings
+origins = [origin for origin in origins if origin]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=origins if origins else ["*"],  # Allow all if no origins specified
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -908,6 +919,93 @@ async def get_risk_metrics(
         "max_drawdown_percent": round(float(max_drawdown_percent), 2),
         "volatility": round(float(volatility), 2)
     }
+
+# ===== AI Strategy Builder Endpoints =====
+
+class AIStrategyRequest(BaseModel):
+    """Schema for AI strategy generation request"""
+    prompt: str
+    
+
+class AIStrategyOptimizeRequest(BaseModel):
+    """Schema for strategy optimization request"""
+    strategy_type: str
+    symbol: str
+    parameters: dict
+
+
+@app.post("/api/ai/generate-strategy")
+async def generate_strategy_from_prompt(
+    request: AIStrategyRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Generate strategy parameters from natural language
+    """
+    try:
+        # Import here to avoid issues
+        from ai_strategy_service import ai_strategy_service
+        
+        result = ai_strategy_service.parse_strategy_request(request.prompt)
+        return result
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate strategy: {str(e)}"
+        )
+
+
+@app.post("/api/ai/optimize-strategy")
+async def optimize_strategy_parameters(
+    request: AIStrategyOptimizeRequest,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get AI-powered parameter optimization suggestions
+    """
+    try:
+        from ai_strategy_service import ai_strategy_service
+        
+        result = ai_strategy_service.optimize_strategy(
+            request.strategy_type,
+            request.symbol,
+            request.parameters
+        )
+        return result
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to optimize strategy: {str(e)}"
+        )
+
+
+@app.post("/api/ai/explain-results")
+async def explain_backtest_results(
+    results: dict,
+    current_user: User = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """
+    Get plain English explanation of backtest results
+    """
+    try:
+        from ai_strategy_service import ai_strategy_service
+        
+        explanation = ai_strategy_service.explain_backtest_results(results)
+        return {"explanation": explanation}
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to explain results: {str(e)}"
+        )
 
 # Run server
 if __name__ == "__main__":

@@ -4,6 +4,7 @@ import Trading from './Trading';
 import './Dashboard.css';
 import BotBuilder from './BotBuilder';
 import Analytics from './Analytics';
+import AIStrategyBuilder from './AIStrategyBuilder';
 
 function Dashboard({ onLogout }) {
   const [user, setUser] = useState(null);
@@ -111,6 +112,12 @@ function Dashboard({ onLogout }) {
           📊 Analytics
         </button>
         <button
+          className={`nav-tab ${currentView === 'ai-builder' ? 'active' : ''}`}
+          onClick={() => handleViewChange('ai-builder')}
+        >
+          🤖 AI Builder
+        </button>
+        <button
           className={`nav-tab ${currentView === 'history' ? 'active' : ''}`}
           onClick={() => handleViewChange('history')}
         >
@@ -194,9 +201,13 @@ function Dashboard({ onLogout }) {
         {currentView === 'bots' && (
           <BotBuilder />
         )}
-        
+
         {currentView === 'analytics' && (
           <Analytics />
+        )}
+        
+        {currentView === 'ai-builder' && (
+          <AIStrategyBuilder />
         )}
 
         {currentView === 'history' && (
